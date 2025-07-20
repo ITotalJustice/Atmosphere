@@ -437,13 +437,17 @@ namespace haze {
         auto file_size = 4_GB;
         u64 offset = 0;
 
-        if (data_header.length > sizeof(PtpUsbBulkContainer)) {
-            /* Got the real file size. */
-            file_size = data_header.length - sizeof(PtpUsbBulkContainer);
-            R_TRY(m_fs.SetFileSize(std::addressof(file), file_size));
+        if (m_send_prop_list) {
+            file_size = m_send_prop_list->size;
         } else {
-            /* Truncate the file after locking for write. */
-            R_TRY(m_fs.SetFileSize(std::addressof(file), 0));
+            if (data_header.length > sizeof(PtpUsbBulkContainer)) {
+                /* Got the real file size. */
+                file_size = data_header.length - sizeof(PtpUsbBulkContainer);
+                R_TRY(m_fs.SetFileSize(std::addressof(file), file_size));
+            } else {
+                /* Truncate the file after locking for write. */
+                R_TRY(m_fs.SetFileSize(std::addressof(file), 0));
+            }
         }
 
         /* Truncate the file to the received size. */

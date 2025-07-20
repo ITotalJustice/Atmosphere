@@ -141,6 +141,7 @@ namespace haze {
             case PtpOperationCode_MtpGetObjectPropValue:      R_RETURN(this->GetObjectPropValue(dp));      break;
             case PtpOperationCode_MtpSetObjectPropValue:      R_RETURN(this->SetObjectPropValue(dp));      break;
             case PtpOperationCode_MtpGetObjPropList:          R_RETURN(this->GetObjectPropList(dp));       break;
+            case PtpOperationCode_MtpSendObjectPropList:      R_RETURN(this->SendObjectPropList(dp));      break;
             case PtpOperationCode_AndroidGetPartialObject64:  R_RETURN(this->GetPartialObject64(dp));      break;
             case PtpOperationCode_AndroidSendPartialObject:   R_RETURN(this->SendPartialObject(dp));       break;
             case PtpOperationCode_AndroidTruncateObject:      R_RETURN(this->TruncateObject(dp));          break;

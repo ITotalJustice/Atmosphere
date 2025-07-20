@@ -20,10 +20,15 @@
 #include <haze/ptp_object_heap.hpp>
 #include <haze/ptp_object_database.hpp>
 #include <haze/ptp_responder_types.hpp>
+#include <optional>
 
 namespace haze {
 
     class PtpDataParser;
+
+    struct ObjectPropList {
+        u64 size;
+    };
 
     class PtpResponder final {
         private:
@@ -33,6 +38,7 @@ namespace haze {
             PtpObjectHeap *m_object_heap;
             PtpBuffers* m_buffers;
             u32 m_send_object_id;
+            std::optional<ObjectPropList> m_send_prop_list;
             bool m_session_open;
 
             PtpObjectDatabase m_object_database;
@@ -84,6 +90,7 @@ namespace haze {
             Result GetObjectPropValue(PtpDataParser &dp);
             Result SetObjectPropValue(PtpDataParser &dp);
             Result GetObjectPropList(PtpDataParser &dp);
+            Result SendObjectPropList(PtpDataParser &dp);
     };
 
 }

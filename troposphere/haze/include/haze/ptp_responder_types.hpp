@@ -58,6 +58,7 @@ namespace haze {
         PtpOperationCode_MtpGetObjectPropValue,
         PtpOperationCode_MtpSetObjectPropValue,
         PtpOperationCode_MtpGetObjPropList,
+        PtpOperationCode_MtpSendObjectPropList,
         PtpOperationCode_AndroidGetPartialObject64,
         PtpOperationCode_AndroidSendPartialObject,
         PtpOperationCode_AndroidTruncateObject,
