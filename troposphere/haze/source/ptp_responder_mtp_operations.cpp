@@ -337,6 +337,9 @@ namespace haze {
     }
 
     Result PtpResponder::SendObjectPropList(PtpDataParser &rdp) {
+        /* Prop list is reset on SendObjectPropList. */
+        m_send_prop_list.reset();
+
         u32 storage_id;
         u32 parent_object;
         u32 format_code;
@@ -408,10 +411,9 @@ namespace haze {
         PtpObject *newobj;
         R_TRY(m_object_database.CreateOrFindObject(parentobj->GetName(), m_buffers->filename_string_buffer, parentobj->GetObjectId(), std::addressof(newobj)));
 
-        /* Save prop list. */
+        /* Create prop list. */
         ObjectPropList prop_list{};
         prop_list.size = ((u64)object_size_msb << 32) | object_size_lsb;
-        m_send_prop_list = prop_list;
 
         /* Make a new object with the intended name. */
         PtpNewObjectInfo new_object_info;
@@ -439,6 +441,8 @@ namespace haze {
             m_send_object_id = new_object_info.object_id;
         }
 
+        /* Save prop list and return success. */
+        m_send_prop_list = prop_list;
         R_RETURN(this->WriteResponse(PtpResponseCode_Ok, new_object_info));
     }
 

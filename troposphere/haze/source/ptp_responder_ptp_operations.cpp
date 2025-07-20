@@ -331,6 +331,9 @@ namespace haze {
     }
 
     Result PtpResponder::SendObjectInfo(PtpDataParser &rdp) {
+        /* Prop list is reset on SendObjectInfo. */
+        m_send_prop_list.reset();
+
         /* Get the storage ID and parent object and flush the request packet. */
         u32 storage_id, parent_object;
         R_TRY(rdp.Read(std::addressof(storage_id)));
