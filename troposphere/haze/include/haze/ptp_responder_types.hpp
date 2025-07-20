@@ -164,7 +164,6 @@ namespace haze {
     };
 
     constexpr u32 UsbBulkPacketBufferSize = 1_MB;
-    constexpr u64 FsBufferSize = UsbBulkPacketBufferSize;
     constexpr s64 DirectoryReadSize = 32;
 
     struct PtpBuffers {
@@ -174,7 +173,6 @@ namespace haze {
         char keywords_string_buffer[PtpStringMaxLength + 1];
 
         FsDirectoryEntry file_system_entry_buffer[DirectoryReadSize];
-        u8 file_system_data_buffer[FsBufferSize];
 
         alignas(4_KB) u8 usb_bulk_write_buffer[UsbBulkPacketBufferSize];
         alignas(4_KB) u8 usb_bulk_read_buffer[UsbBulkPacketBufferSize];

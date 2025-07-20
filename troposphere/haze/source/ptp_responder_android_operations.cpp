@@ -17,6 +17,7 @@
 #include <haze/ptp_data_builder.hpp>
 #include <haze/ptp_data_parser.hpp>
 #include <haze/ptp_responder_types.hpp>
+#include <haze/threaded_file_transfer.hpp>
 
 namespace haze {
 
@@ -54,25 +55,16 @@ namespace haze {
         R_TRY(db.AddDataHeader(m_request_header, size));
 
         /* Begin reading the file, writing data to the builder as we progress. */
-        s64 size_remaining = size;
-        while (true) {
-            /* Get the next batch. */
-            u64 bytes_to_read = std::min<s64>(FsBufferSize, size_remaining);
-            u64 bytes_read;
-
-            R_TRY(m_fs.ReadFile(std::addressof(file), offset, m_buffers->file_system_data_buffer, bytes_to_read, FsReadOption_None, std::addressof(bytes_read)));
-
-            size_remaining -= bytes_read;
-            offset += bytes_read;
-
-            /* Write to output. */
-            R_TRY(db.AddBuffer(m_buffers->file_system_data_buffer, bytes_read));
-
-            /* If we read fewer bytes than the batch size, or have read enough data, we're done. */
-            if (bytes_read < FsBufferSize || size_remaining == 0) {
-                break;
-            }
-        }
+        R_TRY(sphaira::thread::Transfer(offset, offset + size,
+            [this, &file, &obj](void* data, s64 off, s64 size, u64* bytes_read) -> Result {
+                /* Get the next batch. */
+                R_RETURN(m_fs.ReadFile(std::addressof(file), off, data, size, FsReadOption_None, bytes_read));
+            },
+            [this, &db](const void* data, s64 off, s64 size) -> Result {
+                /* Write to output. */
+                R_RETURN(db.AddBuffer((const u8*)data, size));
+            }, sphaira::thread::Mode::SingleThreadedIfSmaller
+        ));
 
         /* Flush the data response. */
         R_TRY(db.Commit());
@@ -120,26 +112,34 @@ namespace haze {
         R_UNLESS(data_header.trans_id == m_request_header.trans_id, haze::ResultOperationNotSupported());
 
         /* Begin writing to the filesystem. */
-        s64 size_remaining = size;
-        while (true) {
-            /* Read as many bytes as we can. */
-            u32 bytes_received;
-            const Result read_res = dp.ReadBuffer(m_buffers->file_system_data_buffer, FsBufferSize, std::addressof(bytes_received));
+        bool is_done = false;
+        R_TRY(sphaira::thread::Transfer(offset, offset + size,
+            [this, &dp, &is_done](void* data, s64 off, s64 size, u64* bytes_read) -> Result {
+                if (is_done) {
+                    *bytes_read = 0;
+                    R_SUCCEED();
+                }
 
-            /* Write to the file. */
-            u32 bytes_to_write = std::min<s64>(size_remaining, bytes_received);
-            R_TRY(m_fs.WriteFile(std::addressof(file), offset, m_buffers->file_system_data_buffer, bytes_to_write, 0));
+                /* Read as many bytes as we can. */
+                u32 bytes_received;
+                const Result read_res = dp.ReadBuffer((u8*)data, size, std::addressof(bytes_received));
+                *bytes_read = bytes_received;
 
-            size_remaining -= bytes_to_write;
-            offset += bytes_to_write;
+                /* If we received fewer bytes than the batch size, we're done. */
+                if (haze::ResultEndOfTransmission::Includes(read_res)) {
+                    is_done = true;
+                    R_SUCCEED();
+                }
 
-            /* If we received fewer bytes than the batch size, or have written enough data, we're done. */
-            if (haze::ResultEndOfTransmission::Includes(read_res) || size_remaining == 0) {
-                break;
-            }
-
-            R_TRY(read_res);
-        }
+                R_RETURN(read_res);
+            },
+            [this, &file, &obj, &offset](const void* data, s64 off, s64 size) -> Result {
+                /* Write to the file. */
+                R_TRY(m_fs.WriteFile(std::addressof(file), offset, data, size, 0));
+                offset += size;
+                R_SUCCEED();
+            }, sphaira::thread::Mode::SingleThreadedIfSmaller
+        ));
 
         /* Write the success response. */
         R_RETURN(this->WriteResponse(PtpResponseCode_Ok));
